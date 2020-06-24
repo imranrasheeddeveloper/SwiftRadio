@@ -204,9 +204,10 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
                 if kDebugLog { print("JSON Station Loading Error") }
                 return
             }
-       
+          
             self.stations = stationsArray
             stationsArray.removeAll()
+             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             if self.segment == false{
             for obj in self.fvrStringTitleArray{
                 print(obj)
@@ -221,6 +222,7 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
          }
             dump(self.stations)
         }
+    }
     }
     
     //*****************************************************************
@@ -724,6 +726,7 @@ extension StationsViewController: NowPlayingViewControllerDelegate {
                     context.delete(result[0] as! NSManagedObject)
                 }
                 try context.save()
+                
                 DispatchQueue.main.async {
                     self.loadStationsFromJSON()
                     self.tableView.reloadData()
