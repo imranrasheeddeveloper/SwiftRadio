@@ -11,6 +11,7 @@ import MediaPlayer
 import AVFoundation
 import CoreData
 class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
+      var currentStation: RadioStation!
     var history = [NSManagedObject]()
     var fvrStringTitleArray : [String] = []
     @IBOutlet weak var segmentedControl: UISegmentedControl!
@@ -24,12 +25,17 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
                 self.loadStationsFromJSON()
                 self.tableView.reloadData()
             }
+
             
         case 1:
             segment = false
+            self.fetchData()
             DispatchQueue.main.async {
                 self.loadStationsFromJSON()
                 self.tableView.reloadData()
+                self.segment = true
+                self.loadStationsFromJSON()
+                self.segment = false
             }
            default:
                break;
@@ -86,7 +92,7 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        //deleteAllRecords()
+        searchController.isActive = true
         fetchData()
         Constants.addBannerViewToView(viewController: self)
         // Register 'Nothing Found' cell xib
@@ -130,7 +136,7 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
          Constants.showInterstitial(viewController: self)
-        title = "Swift Radio"
+        //title = "Swift Radio"
     }
 
     //*****************************************************************
@@ -186,7 +192,7 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
     
     func loadStationsFromJSON() {
         stations.removeAll()
-        
+        fetchData()
         // Turn on network indicator in status bar
         UIApplication.shared.isNetworkActivityIndicatorVisible = true
         
@@ -207,23 +213,16 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
           
             self.stations = stationsArray
             stationsArray.removeAll()
-             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             if self.segment == false{
-            for obj in self.fvrStringTitleArray{
-                print(obj)
-                if let index = self.stations.firstIndex(where: {$0.name == obj}) // Search id = 1 you can set any value
-               {
-                self.stations.remove(at: index)
-               }
+            let output = self.stations.filter{ self.fvrStringTitleArray.contains($0.name) }
+            self.stations = output
+                }
+                
+                }
+                
             }
-                dump(self.stations)
-
-                print(self.stations.count)
-         }
-            dump(self.stations)
         }
-    }
-    }
     
     //*****************************************************************
     // MARK: - Segue
@@ -238,8 +237,7 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
         
         if let indexPath = (sender as? IndexPath) {
             // User clicked on row, load/reset station
-            radioPlayer.station = stations[indexPath.row]
-           // searchController.isActive ? searchedStations[indexPath.row] :
+            radioPlayer.station = searchController.isActive ? searchedStations[indexPath.row] : stations[indexPath.row]
             newStation = radioPlayer.station != previousStation
             previousStation = radioPlayer.station
         } else {
@@ -375,13 +373,13 @@ extension StationsViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-//        if searchController.isActive {
-//
-//            return searchedStations.count
-//        }
-//        else {
+        if searchController.isActive {
+
+            return searchedStations.count
+        }
+        else {
             return stations.isEmpty ? 1 : stations.count
-//        }
+       }
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -398,9 +396,7 @@ extension StationsViewController: UITableViewDataSource {
             // alternate background color
             cell.backgroundColor = (indexPath.row % 2 == 0) ? UIColor.clear : UIColor.black.withAlphaComponent(0.2)
             cell.favImage.isUserInteractionEnabled = true
-            print(stations.count)
-            let station = stations[indexPath.row]
-            //searchController.isActive ? searchedStations[indexPath.row] :
+            let station =  searchController.isActive ? searchedStations[indexPath.row] : stations[indexPath.row]
             cell.configureStationCell(station: station)
             if segment == true{
                 if stations[indexPath.row].name == SearchbyName(number: station.name){
@@ -436,8 +432,13 @@ extension StationsViewController: UITableViewDelegate {
         var delete : UITableViewRowAction! = nil
         if segment == false{
             delete = UITableViewRowAction(style: .destructive, title: "Delete") { (action, indexPath) in
+                
                 self.deleteObject(name: self.stations[indexPath.row].name)
-                tableView.reloadData()
+                self.loadStationsFromJSON()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    tableView.reloadData()
+                }
+                
               }
        
         }
@@ -445,7 +446,9 @@ extension StationsViewController: UITableViewDelegate {
             delete = UITableViewRowAction(style: .normal, title: "Favourties") { (action, indexPath) in
                          
             let currentCell = tableView.cellForRow(at: indexPath) as! StationTableViewCell
-                if self.Search(number: currentCell.stationNameLabel.text!) != 0{print("number Already Exist")}
+                if self.Search(number: currentCell.stationNameLabel.text!) != 0{print("number Already Exist")
+                    
+                }
              else{
             let appDelegate = UIApplication.shared.delegate as? AppDelegate
             let managedContext = appDelegate!.persistentContainer.viewContext
@@ -462,6 +465,7 @@ extension StationsViewController: UITableViewDelegate {
              do {
                  try managedContext.save()
                 self.history.append(fvr)
+                tableView.reloadData()
              } catch let error as NSError {
                  print("Could not save. \(error), \(error.userInfo)")
              }
@@ -506,11 +510,22 @@ extension StationsViewController: UITableViewDelegate {
         }
          
     }
-    
+ 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
+//        if radioPlayer.player.isPlaying{
+//            if  currentStation.name == stations[indexPath.row].name{
+//                print("Playing")
+//            }
+//            else{
+//                tableView.deselectRow(at: indexPath, animated: true)
+//                performSegue(withIdentifier: "NowPlaying", sender: indexPath)
+//            }
+//        }
+//        else{
         tableView.deselectRow(at: indexPath, animated: true)
         performSegue(withIdentifier: "NowPlaying", sender: indexPath)
+        //}
+        
         
     }
 }
@@ -519,16 +534,15 @@ extension StationsViewController: UITableViewDelegate {
 // MARK: - UISearchControllerDelegate / Setup
 //*****************************************************************
 
-extension StationsViewController: UISearchResultsUpdating {
+extension StationsViewController: UISearchResultsUpdating,UISearchBarDelegate {
     
     func setupSearchController() {
         guard searchable else { return }
-        
         searchController.searchResultsUpdater = self
         searchController.dimsBackgroundDuringPresentation = false
         searchController.searchBar.sizeToFit()
         
-        // Add UISearchController to the tableView
+         //Add UISearchController to the tableView
         tableView.tableHeaderView = searchController.searchBar
         tableView.tableHeaderView?.backgroundColor = UIColor.clear
         definesPresentationContext = true
@@ -540,6 +554,7 @@ extension StationsViewController: UISearchResultsUpdating {
         
         // Hide the UISearchController
         tableView.setContentOffset(CGPoint(x: 0.0, y: searchController.searchBar.frame.size.height), animated: false)
+       
         // iOS 13 or greater
         if  #available(iOS 13.0, *) {
             // Make text readable in black searchbar
@@ -661,7 +676,7 @@ extension StationsViewController: NowPlayingViewControllerDelegate {
     }
     
     func fetchData()
-     {
+    {  fvrStringTitleArray.removeAll()
          print("Fetching Data..")
          let appDelegate = UIApplication.shared.delegate as! AppDelegate
          let context = appDelegate.persistentContainer.viewContext
@@ -675,6 +690,9 @@ extension StationsViewController: NowPlayingViewControllerDelegate {
                  let fvrtitle = data.value(forKey: "name") as! String
                 fvrStringTitleArray.append(fvrtitle)
                  print(fvrtitle)
+                if segment == false{
+                    tableView.reloadData()
+                }
              }
          } catch {
              print("Fetching data Failed")

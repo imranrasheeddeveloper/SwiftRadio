@@ -10,7 +10,9 @@ import UIKit
 import MBCircularProgressBar
 class SleepTimeViewController: UIViewController,UITextFieldDelegate {
 
-    
+    @IBOutlet weak var timerLbl: UILabel!
+    @IBOutlet weak var stop: UIButton!
+    @IBOutlet weak var start: UIButton!
     @IBOutlet weak var textfieldfortime: UITextField!
     @IBOutlet weak var bacjgroundImage: UIImageView!
     let radioPlayer = RadioPlayer()
@@ -21,6 +23,9 @@ class SleepTimeViewController: UIViewController,UITextFieldDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
         if Constants.HoldingSomeValue != 0{
+            //timerLbl.text =  String(Constants.HoldingSomeValue / 60)
+            start.isHidden = true
+            stop.isHidden = false
             UIView.animate(withDuration: 60) {
                 self.timerProgress.value = CGFloat(Constants.HoldingSomeValue / 30)
             }
@@ -75,24 +80,32 @@ class SleepTimeViewController: UIViewController,UITextFieldDelegate {
     }
 
     @IBAction func startTimer(_ sender: UIButton) {
-     
+        start.isHidden  = true
+        stop.isHidden = false
         if textfieldfortime.text != "" {
         textfieldfortime.endEditing(true)
         timeLeft = Int(textfieldfortime.text!)! * 60
         print(timeLeft)
          timer = Timer.scheduledTimer(timeInterval: 1.0, target: self, selector: #selector(fire), userInfo: nil, repeats: true)
         }
-        UIView.animate(withDuration: 60) {
+        UIView.animate(withDuration: 120) {
                              self.timerProgress.value = CGFloat(self.timeLeft / 30)
              }
 
     }
+    @IBAction func stopimer(_ sender: UIButton) {
+        start.isHidden = false
+        stop.isHidden = true
+        timer?.invalidate()
+    }
     
     @objc func fire()
     {
-        print(timeLeft)
+        timerLbl.text =  String(timeLeft / 60)
         timeLeft -= 1
         if timeLeft <= 0 {
+            stop.isHidden = true
+            start.isHidden = false
             timer?.invalidate()
             radioPlayer.player.stop()
             timer = nil
