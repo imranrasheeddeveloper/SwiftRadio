@@ -3,7 +3,7 @@
 //  Swift Radio
 //
 //  Created by Matthew Fecher on 7/2/15.
-//  Copyright (c) 2015 MatthewFecher.com. All rights reserved.
+//  Copyright (c) 2020 www.itiridtechnologies.com All rights reserved.
 //
 
 import UIKit

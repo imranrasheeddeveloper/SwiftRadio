@@ -3,7 +3,7 @@
 //  Swift Radio
 //
 //  Created by Matthew Fecher on 7/9/15.
-//  Copyright (c) 2015 MatthewFecher.com. All rights reserved.
+//  Copyright (c) 2020 www.itiridtechnologies.com All rights reserved.
 //
 
 import UIKit
@@ -36,7 +36,7 @@ class InfoDetailViewController: UIViewController {
         downloadTask = nil
     }
     override func viewWillAppear(_ animated: Bool) {
-              Constants.showInterstitial(viewController: self)
+              //Constants.showInterstitial(viewController: self)
            }
     //*****************************************************************
     // MARK: - UI Helpers

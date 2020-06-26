@@ -30,7 +30,7 @@ class NowPlayingViewController: UIViewController {
     
     
     override func viewWillAppear(_ animated: Bool) {
-              Constants.showInterstitial(viewController: self)
+        Constants.showInterstitial(viewController: self)
            }
     weak var delegate: NowPlayingViewControllerDelegate?
 

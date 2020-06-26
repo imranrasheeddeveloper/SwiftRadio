@@ -16,7 +16,9 @@ struct DataManager {
     
     static func getStationDataWithSuccess(success: @escaping ((_ metaData: Data?) -> Void)) {
 
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .userInitiated).async
+//        DispatchQueue.main.async
+        {
             if useLocalStations {
                 getDataFromFileWithSuccess() { data in
                     success(data)

@@ -16,13 +16,14 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
     var fvrStringTitleArray : [String] = []
     @IBOutlet weak var segmentedControl: UISegmentedControl!
     var segment : Bool = true
+    var stationsfvr : [RadioStation]? = nil
     @IBAction func indexChanged(_ sender: UISegmentedControl) {
         switch segmentedControl.selectedSegmentIndex {
             
            case 0:
             segment = true
             DispatchQueue.main.async {
-                self.loadStationsFromJSON()
+                self.stations = self.stationsfvr!
                 self.tableView.reloadData()
             }
 
@@ -31,11 +32,12 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
             segment = false
             self.fetchData()
             DispatchQueue.main.async {
-                self.loadStationsFromJSON()
+                self.stationsfvr = self.stations
+                let output = self.stations.filter{ self.fvrStringTitleArray.contains($0.name) }
+                self.stations = output
                 self.tableView.reloadData()
-                self.segment = true
-                self.loadStationsFromJSON()
-                self.segment = false
+                
+                
             }
            default:
                break;
@@ -86,9 +88,9 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
         return UIRefreshControl()
     }()
     
-    //*****************************************************************
+    //***********************
     // MARK: - ViewDidLoad
-    //*****************************************************************
+    //***********************
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -135,13 +137,13 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-         Constants.showInterstitial(viewController: self)
+         //Constants.showInterstitial(viewController: self)
         //title = "Swift Radio"
     }
 
-    //*****************************************************************
+    //***********************
     // MARK: - Setup UI Elements
-    //*****************************************************************
+    //***********************
     
     func setupPullToRefresh() {
         refreshControl.attributedTitle = NSAttributedString(string: "Pull to refresh", attributes: [.foregroundColor: UIColor.white])
@@ -163,9 +165,9 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
         navigationItem.rightBarButtonItem = btn
     }
     
-    //*****************************************************************
+    //***********************
     // MARK: - Actions
-    //*****************************************************************
+    //***********************
     
     @objc func nowPlayingBarButtonPressed() {
         performSegue(withIdentifier: "NowPlaying", sender: self)
@@ -177,18 +179,24 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
     
     @objc func refresh(sender: AnyObject) {
         // Pull to Refresh
+        
+        if segment == false{
+            self.refreshControl.endRefreshing()
+        }
+        else{
         loadStationsFromJSON()
         
         // Wait 2 seconds then refresh screen
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             self.refreshControl.endRefreshing()
             self.view.setNeedsDisplay()
+            }
         }
     }
     
-    //*****************************************************************
+    //***********************
     // MARK: - Load Station Data
-    //*****************************************************************
+    //***********************
     
     func loadStationsFromJSON() {
         stations.removeAll()
@@ -198,13 +206,17 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
         
         // Get the Radio Stations
         DataManager.getStationDataWithSuccess() { (data) in
+            
             self.stations.removeAll()
-            // Turn off network indicator in status bar
+             //Turn off network indicator in status bar
             defer {
                 DispatchQueue.main.async { UIApplication.shared.isNetworkActivityIndicatorVisible = false }
             }
-            
-            if kDebugLog { print("Stations JSON Found") }
+
+            if kDebugLog {
+                print("Stations JSON Found")
+
+            }
             
             guard let data = data, let jsonDictionary = try? JSONDecoder().decode([String: [RadioStation]].self, from: data), var stationsArray = jsonDictionary["station"] else {
                 if kDebugLog { print("JSON Station Loading Error") }
@@ -212,21 +224,13 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
             }
           
             self.stations = stationsArray
-            stationsArray.removeAll()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            if self.segment == false{
-            let output = self.stations.filter{ self.fvrStringTitleArray.contains($0.name) }
-            self.stations = output
-                }
-                
-                }
                 
             }
         }
     
-    //*****************************************************************
+    //***********************
     // MARK: - Segue
-    //*****************************************************************
+    //***********************
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         guard segue.identifier == "NowPlaying", let nowPlayingVC = segue.destination as? NowPlayingViewController else { return }
@@ -250,9 +254,9 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
         nowPlayingVC.delegate = self
     }
     
-    //*****************************************************************
+    //***********************
     // MARK: - Private helpers
-    //*****************************************************************
+    //***********************
     
     private func stationsDidUpdate() {
         DispatchQueue.main.async {
@@ -299,9 +303,9 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
         return index
     }
     
-    //*****************************************************************
+    //***********************
     // MARK: - Remote Command Center Controls
-    //*****************************************************************
+    //***********************
     
     func setupRemoteCommandCenter() {
         // Get the shared MPRemoteCommandCenter
@@ -328,9 +332,9 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
         }
     }
     
-    //*****************************************************************
+    //***********************
     // MARK: - MPNowPlayingInfoCenter (Lock screen)
-    //*****************************************************************
+    //***********************
     
     func updateLockScreen(with track: Track?) {
         
@@ -356,9 +360,9 @@ class StationsViewController: UIViewController, UIGestureRecognizerDelegate {
     }
 }
 
-//*****************************************************************
+//***********************
 // MARK: - TableViewDataSource
-//*****************************************************************
+//***********************
 
 extension StationsViewController: UITableViewDataSource {
     
@@ -385,7 +389,7 @@ extension StationsViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         if stations.isEmpty {
-            let cell = tableView.dequeueReusableCell(withIdentifier: "NothingFound", for: indexPath) 
+            let cell = tableView.dequeueReusableCell(withIdentifier: "NothingFound", for: indexPath)
             cell.backgroundColor = .clear
             cell.selectionStyle = .none
             return cell
@@ -421,9 +425,9 @@ extension StationsViewController: UITableViewDataSource {
     }
 }
 
-//*****************************************************************
+//***********************
 // MARK: - TableViewDelegate
-//*****************************************************************
+//***********************
 
 extension StationsViewController: UITableViewDelegate {
     
@@ -434,10 +438,6 @@ extension StationsViewController: UITableViewDelegate {
             delete = UITableViewRowAction(style: .destructive, title: "Delete") { (action, indexPath) in
                 
                 self.deleteObject(name: self.stations[indexPath.row].name)
-                self.loadStationsFromJSON()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    tableView.reloadData()
-                }
                 
               }
        
@@ -530,9 +530,9 @@ extension StationsViewController: UITableViewDelegate {
     }
 }
 
-//*****************************************************************
+//***********************
 // MARK: - UISearchControllerDelegate / Setup
-//*****************************************************************
+//***********************
 
 extension StationsViewController: UISearchResultsUpdating,UISearchBarDelegate {
     
@@ -576,9 +576,9 @@ extension StationsViewController: UISearchResultsUpdating,UISearchBarDelegate {
     }
 }
 
-//*****************************************************************
+//***********************
 // MARK: - RadioPlayerDelegate
-//*****************************************************************
+//***********************
 
 extension StationsViewController: RadioPlayerDelegate {
     
@@ -604,9 +604,9 @@ extension StationsViewController: RadioPlayerDelegate {
     }
 }
 
-//*****************************************************************
+//***********************
 // MARK: - Handoff Functionality - GH
-//*****************************************************************
+//***********************
 
 extension StationsViewController {
     
@@ -638,9 +638,9 @@ extension StationsViewController {
     }
 }
 
-//*****************************************************************
+//***********************
 // MARK: - NowPlayingViewControllerDelegate
-//*****************************************************************
+//***********************
 
 extension StationsViewController: NowPlayingViewControllerDelegate {
     
@@ -690,9 +690,9 @@ extension StationsViewController: NowPlayingViewControllerDelegate {
                  let fvrtitle = data.value(forKey: "name") as! String
                 fvrStringTitleArray.append(fvrtitle)
                  print(fvrtitle)
-                if segment == false{
-                    tableView.reloadData()
-                }
+//                if segment == false{
+//                    tableView.reloadData()
+//                }
              }
          } catch {
              print("Fetching data Failed")
@@ -733,7 +733,7 @@ extension StationsViewController: NowPlayingViewControllerDelegate {
         do {
             let result = try context.fetch(request)
             if result.count > 0 {
-                // Delete _all_ objects:
+                // Delete all objects:
                 for object in result {
                     context.delete(object as! NSManagedObject)
                     stations.removeAll(where: { $0.name == name })
@@ -745,10 +745,10 @@ extension StationsViewController: NowPlayingViewControllerDelegate {
                 }
                 try context.save()
                 
-                DispatchQueue.main.async {
-                    self.loadStationsFromJSON()
-                    self.tableView.reloadData()
-                }
+//                DispatchQueue.main.async {
+//                    self.loadStationsFromJSON()
+//                    self.tableView.reloadData()
+//                }
                 
             } else {
                 
